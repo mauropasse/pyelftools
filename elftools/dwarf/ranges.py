@@ -31,6 +31,12 @@ class RangeLists(object):
         self.stream.seek(offset, os.SEEK_SET)
         return self._parse_range_list_from_stream()
 
+    def get_range_size_at_offset(self, offset):
+        """ Get a range size at the given offset in the section.
+        """
+        self.stream.seek(offset, os.SEEK_SET)
+        return self._parse_range_size_from_stream()
+
     def iter_range_lists(self):
         """ Yield all range lists found in the section.
         """
@@ -63,3 +69,20 @@ class RangeLists(object):
                     begin_offset=begin_offset,
                     end_offset=end_offset))
         return lst
+
+    def _parse_range_size_from_stream(self):
+        lst = []
+        while True:
+            begin_offset = struct_parse(
+                self.structs.Dwarf_target_addr(''), self.stream)
+            end_offset = struct_parse(
+                self.structs.Dwarf_target_addr(''), self.stream)
+            if begin_offset == 0 and end_offset == 0:
+                # End of list - we're done.
+                break
+            elif begin_offset == self._max_addr:
+                # Base address selection entry
+                lst.append(end_offset)
+            else:
+                lst.append(end_offset - begin_offset)
+        return sum(lst)
